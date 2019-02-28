@@ -1,11 +1,8 @@
 pragma solidity ^0.5;
 
 // Participants
-
 contract Customer {
-    bool[3] _executions  = [false, false, false];
-
-    // Dependencies
+    // bool[3] _executions  = [false, false, false];
     DataObjectStore _store;
 
     constructor(DataObjectStore store) public {
@@ -20,19 +17,20 @@ contract Customer {
         return _store.createInstance();
     }
 
+    // Does not work with truffle but in remix
+    /*
     modifier executeOnce (uint8 tasknumber) {
         require(!_executions[tasknumber], "Function can only be executed one");
         _;
     }
+    */
 
     // Tasks
     function requestCar(uint64 instanceId, string memory carType, uint32 startDate, uint32 endDate) public  {
         // postcondition
         require(startDate < endDate, "Postcondition not fulfilled");
 
-        // get stored objects for instance
         Order order = Order(_store.getDataObject("Order"));
-
         // set state
         order.setStartDate(instanceId, startDate);
         order.setEndDate(instanceId, endDate);
@@ -40,48 +38,50 @@ contract Customer {
     }
 
     function proveDriversLicense(uint64 instanceId, address driversLicenseReference, uint64 referenceId) public  {
-        // get stored objects for instance
         Order order = Order(_store.getDataObject("Order"));
 
+        // precondition
         require(order.getAccepted(instanceId) == true, "Precondition not fulfilled");
 
         DriversLicense driversLicense = DriversLicense(driversLicenseReference);
 
+        // postcondition
         require(driversLicense.getValidUntil(referenceId) > driversLicense.getBirthDateYear(referenceId), "Postcondition not fulfilled");
 
+        // set state
         _store.importDataObject(instanceId, "DriversLicense", address(driversLicense), referenceId);
     }
 
     function provePaymentOfInvoice(uint64 instanceId, uint32 transfer_amount) public {
-        // get stored objects for instance
         Invoice invoice = Invoice(_store.getDataObject("Invoice"));
 
-        //Precondition
+        // precondition
         require(invoice.getPrice(instanceId) > 0, "Precondition not fulfilled");
 
-        // Postcondition
+        // postcondition
         require(invoice.getPrice(instanceId) == transfer_amount, "Postcondition not fulfilled");
 
+        // set state
         invoice.setTransferAmount(instanceId, transfer_amount);
     }
 
 }
 
 contract RentalCarCompany {
-    bool[5] _executions  = [false, false, false, false, false];
-
-    // Dependencies
+    // bool[5] _executions  = [false, false, false, false, false];
     DataObjectStore _store;
 
     constructor(DataObjectStore store) public {
         _store = store;
     }
 
+    // Does not work with truffle but in remix
+    /*
     modifier executeOnce (uint8 tasknumber) {
         require(!_executions[tasknumber], "Function can only be executed one");
-        _executions[tasknumber] = true;
         _;
     }
+    */
 
     function getLatestInstanceId() public view returns(uint64) {
         return _store.getLatestInstanceId();
@@ -89,7 +89,6 @@ contract RentalCarCompany {
 
      // Tasks
     function rejectOrder(uint64 instanceId, bool rejected) public  {
-        // get stored objects for instance
         Order order = Order(_store.getDataObject("Order"));
 
         // precondition
@@ -104,7 +103,6 @@ contract RentalCarCompany {
     }
 
     function acceptOrder(uint64 instanceId, bool accepted) public  {
-        // get stored objects for instance
         Order order = Order(_store.getDataObject("Order"));
 
         // precondition
@@ -119,15 +117,15 @@ contract RentalCarCompany {
     }
 
     function sendInvoice(uint64 instanceId, uint32 price) public  {
-        // precondition
         DriversLicense driversLicense = DriversLicense(_store.getImportedDataObject(instanceId, "DriversLicense"));
         uint64 driversLicenseInstance = _store.getImportedDataObjectInstance(instanceId, "DriversLicense");
+
+        // precondition
         require(driversLicense.getValidUntil(driversLicenseInstance) > driversLicense.getBirthDateYear(driversLicenseInstance), "Precondition not fulfilled");
 
         // postcondition
         require(price > 0, "Postcondition not fulfilled");
 
-        // get stored objects for instance
         Invoice invoice = Invoice(_store.getDataObject("Invoice"));
 
         // set state
@@ -135,76 +133,75 @@ contract RentalCarCompany {
     }
 
     function requestCarPreparation(uint64 instanceId, uint16 id) public  {
-        // precondition
         DriversLicense driversLicense = DriversLicense(_store.getImportedDataObject(instanceId, "DriversLicense"));
         uint64 driversLicenseInstance = _store.getImportedDataObjectInstance(instanceId, "DriversLicense");
+
+        // precondition
         require(driversLicense.getValidUntil(driversLicenseInstance) > driversLicense.getBirthDateYear(driversLicenseInstance), "Precondition not fulfilled");
 
-
         // postcondition
-        require(id > 0, "Postcondition not fulfilled"); // No condition
+        require(id > 0, "Postcondition not fulfilled");
 
-        // get stored objects for instance
         Car car = Car(_store.getDataObject("Car"));
 
         // set state
         car.setId(instanceId, id);
-        // set flow control
-        car.setRequestCarPreparationDone(instanceId, true);
     }
 
     function handOverKeys(uint64 instanceId, uint32 keyId) public  {
-        // get stored objects for instance
         Car car = Car(_store.getDataObject("Car"));
-        Order order = Order(_store.getDataObject("Order"));
 
+        // precondition
         require(car.getId(instanceId) == car.getPreparedCarId(instanceId), "Precondition not fulfilled");
-        // public CHECK
 
+        // postcondition
         require(keyId > 0, "Postcondition not fulfilled");
 
+        Order order = Order(_store.getDataObject("Order"));
+
+        // set state
         order.setKeyId(instanceId, keyId);
     }
 }
 
 
 contract Staff {
-    bool[1]  _executions  = [false];
-
-    // Dependencies
+    //bool[1]  _executions  = [false];
     DataObjectStore _store;
 
     constructor(DataObjectStore store) public {
         _store = store;
     }
 
+    // Does not work with truffle but in remix
+    /*
     modifier executeOnce (uint8 tasknumber) {
         require(!_executions[tasknumber], "Function can only be executed one");
-        _executions[tasknumber] = true;
         _;
     }
+    */
 
     function getLatestInstanceId() public view returns(uint64) {
         return _store.getLatestInstanceId();
     }
 
-
     // Tasks
     function confirmCarPreparation(uint64 instanceId, uint16 preparedCarId) public  {
-        // get stored objects for instance
         Car car = Car(_store.getDataObject("Car"));
 
-        require(car.getRequestCarPreparationDone(instanceId) == true, "Precondition not fulfilled");
+        // precondition
+        require(car.getId(instanceId) > 0, "Precondition not fulfilled");
 
+        // postcondition
         require(preparedCarId == car.getId(instanceId), "Postcondition not fulfilled");
 
+        // set state
         car.setPreparedCarId(instanceId, preparedCarId);
     }
 }
 
 
-// Data Objects
-
+// Data Object Store
 contract DataObjectStore {
     uint64 instanceId = 0;
     mapping (uint64 => mapping (string => address)) importReferences;
@@ -248,12 +245,14 @@ contract DataObjectStore {
     }
 }
 
+// Data Object Interfaces
 interface DriversLicense {
     function getBirthDateYear(uint64 instanceId) external view returns (uint16);
     function getValidUntil(uint64 instanceId) external view returns (uint32);
     function getAuthorizedCarTypes(uint64 instanceId) external view returns (string memory);
 }
 
+// Example of imported Data Object (initialized)
 contract MyDriversLicense is DriversLicense {
     mapping (uint64 => uint16) _birthDateYear;
     mapping (uint64 => uint32) _validUntil;
@@ -278,7 +277,7 @@ contract MyDriversLicense is DriversLicense {
     }
 }
 
-
+// Data Objects
 contract Order {
     mapping (uint64 => string) _carType;
     mapping (uint64 => uint32) _startDate;
@@ -358,11 +357,9 @@ contract Invoice {
     }
 }
 
-
 contract Car {
     mapping (uint64 => uint16) _id;
     mapping (uint64 => uint16) _preparedCarId;
-    mapping (uint64 => bool) _requestCarPreparationDone;
 
     function setId(uint64 instanceId, uint16 value) public {
         _id[instanceId] = value;
@@ -378,13 +375,5 @@ contract Car {
 
     function getPreparedCarId(uint64 instanceId) public view returns(uint16) {
         return _preparedCarId[instanceId];
-    }
-
-    function setRequestCarPreparationDone(uint64 instanceId, bool value) public {
-        _requestCarPreparationDone[instanceId] = value;
-    }
-
-    function getRequestCarPreparationDone(uint64 instanceId) public view returns(bool) {
-        return _requestCarPreparationDone[instanceId];
     }
 }
